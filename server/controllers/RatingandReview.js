@@ -8,52 +8,75 @@ exports.createRating = async (req, res) => {
     const userId = req.user.id
     const { rating, review, courseId } = req.body
 
-    // Check if the user is enrolled in the course
+    // Validate input
+    if (!courseId || !rating) {
+      return res.status(400).json({
+        success: false,
+        message: "Course ID and rating are required",
+      })
+    }
 
-    const courseDetails = await Course.findOne({
-      _id: courseId,
-      studentsEnroled: { $elemMatch: { $eq: userId } },
-    })
-
-    if (!courseDetails) {
+    // Check if the course exists
+    const course = await Course.findById(courseId)
+    if (!course) {
       return res.status(404).json({
         success: false,
-        message: "Student is not enrolled in this course",
+        message: "Course not found",
+      })
+    }
+
+    // Check if the user is enrolled in the course
+    const isEnrolled = course.studentsEnroled.includes(userId)
+    if (!isEnrolled) {
+      return res.status(403).json({
+        success: false,
+        message: "You must be enrolled in the course to submit a review",
       })
     }
 
     // Check if the user has already reviewed the course
-    const alreadyReviewed = await RatingAndReview.findOne({
+    const existingReview = await RatingAndReview.findOne({
       user: userId,
       course: courseId,
     })
 
-    if (alreadyReviewed) {
-      return res.status(403).json({
+    if (existingReview) {
+      return res.status(400).json({
         success: false,
-        message: "Course already reviewed by user",
+        message: "You have already reviewed this course",
       })
     }
 
+
     // Create a new rating and review
     const ratingReview = await RatingAndReview.create({
-      rating,
-      review,
+      rating: Number(rating),
+      review: review || "",
       course: courseId,
       user: userId,
     })
 
+
     // Add the rating and review to the course
-    await Course.findByIdAndUpdate(courseId, {
-      $push: {
-        ratingAndReviews: ratingReview,
+    const updatedCourse = await Course.findByIdAndUpdate(
+      courseId,
+      {
+        $push: {
+          ratingAndReviews: ratingReview._id,
+        },
       },
-    })
-    await courseDetails.save()
+      { new: true }
+    )
+
+    if (!updatedCourse) {
+      // If course update fails, clean up the created review
+      await RatingAndReview.findByIdAndDelete(ratingReview._id)
+      throw new Error("Failed to update course with the new review")
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Rating and review created successfully",
+      message: "Thank you for your review!",
       ratingReview,
     })
   } catch (error) {

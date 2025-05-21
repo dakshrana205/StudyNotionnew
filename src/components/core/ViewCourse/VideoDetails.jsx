@@ -26,100 +26,130 @@ const VideoDetails = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    ;(async () => {
-      if (!courseSectionData.length) return
-      if (!courseId && !sectionId && !subSectionId) {
-        navigate(`/dashboard/enrolled-courses`)
-      } else {
-        // console.log("courseSectionData", courseSectionData)
-        const filteredData = courseSectionData.filter(
-          (course) => course._id === sectionId
-        )
-        // console.log("filteredData", filteredData)
-        const filteredVideoData = filteredData?.[0]?.subSection.filter(
-          (data) => data._id === subSectionId
-        )
-        // console.log("filteredVideoData", filteredVideoData)
-        setVideoData(filteredVideoData[0])
-        setPreviewSource(courseEntireData.thumbnail)
-        setVideoEnded(false)
+    const loadData = async () => {
+      if (!courseSectionData?.length) return;
+      
+      if (!courseId || !sectionId || !subSectionId) {
+        navigate(`/dashboard/enrolled-courses`);
+        return;
       }
-    })()
-  }, [courseSectionData, courseEntireData, location.pathname])
+
+      try {
+        const filteredData = courseSectionData.filter(
+          (course) => course?._id === sectionId
+        );
+
+        if (!filteredData.length || !filteredData[0]?.subSection) {
+          console.error("No matching section or subsection found");
+          return;
+        }
+
+        const filteredVideoData = filteredData[0].subSection.filter(
+          (data) => data?._id === subSectionId
+        );
+
+        if (!filteredVideoData.length) {
+          console.error("No matching video data found");
+          return;
+        }
+
+
+        setVideoData(filteredVideoData[0]);
+        if (courseEntireData?.thumbnail) {
+          setPreviewSource(courseEntireData.thumbnail);
+        }
+        setVideoEnded(false);
+      } catch (error) {
+        console.error("Error loading video data:", error);
+      }
+    };
+
+    loadData();
+  }, [courseSectionData, courseEntireData, location.pathname, courseId, sectionId, subSectionId, navigate]);
 
   // check if the lecture is the first video of the course
   const isFirstVideo = () => {
+    if (!courseSectionData?.length) return true;
+    
     const currentSectionIndx = courseSectionData.findIndex(
-      (data) => data._id === sectionId
+      (data) => data?._id === sectionId
     )
+
+    if (currentSectionIndx === -1 || !courseSectionData[currentSectionIndx]?.subSection) {
+      return true;
+    }
 
     const currentSubSectionIndx = courseSectionData[
       currentSectionIndx
-    ].subSection.findIndex((data) => data._id === subSectionId)
+    ].subSection.findIndex((data) => data?._id === subSectionId)
 
-    if (currentSectionIndx === 0 && currentSubSectionIndx === 0) {
-      return true
-    } else {
-      return false
-    }
+    return currentSectionIndx === 0 && currentSubSectionIndx === 0;
   }
 
   // go to the next video
   const goToNextVideo = () => {
-    // console.log(courseSectionData)
+    if (!courseSectionData?.length) return;
 
     const currentSectionIndx = courseSectionData.findIndex(
-      (data) => data._id === sectionId
+      (data) => data?._id === sectionId
     )
 
-    const noOfSubsections =
-      courseSectionData[currentSectionIndx].subSection.length
+    if (currentSectionIndx === -1) return;
 
-    const currentSubSectionIndx = courseSectionData[
-      currentSectionIndx
-    ].subSection.findIndex((data) => data._id === subSectionId)
+    const currentSection = courseSectionData[currentSectionIndx];
+    if (!currentSection?.subSection?.length) return;
 
-    // console.log("no of subsections", noOfSubsections)
+    const noOfSubsections = currentSection.subSection.length;
 
-    if (currentSubSectionIndx !== noOfSubsections - 1) {
-      const nextSubSectionId =
-        courseSectionData[currentSectionIndx].subSection[
-          currentSubSectionIndx + 1
-        ]._id
-      navigate(
-        `/view-course/${courseId}/section/${sectionId}/sub-section/${nextSubSectionId}`
-      )
-    } else {
-      const nextSectionId = courseSectionData[currentSectionIndx + 1]._id
-      const nextSubSectionId =
-        courseSectionData[currentSectionIndx + 1].subSection[0]._id
-      navigate(
-        `/view-course/${courseId}/section/${nextSectionId}/sub-section/${nextSubSectionId}`
-      )
+    const currentSubSectionIndx = currentSection.subSection.findIndex(
+      (data) => data?._id === subSectionId
+    )
+
+    // If there's a next video in the current section
+    if (currentSubSectionIndx !== -1 && currentSubSectionIndx < noOfSubsections - 1) {
+      const nextSubSection = currentSection.subSection[currentSubSectionIndx + 1];
+      if (nextSubSection?._id) {
+        navigate(
+          `/view-course/${courseId}/section/${sectionId}/sub-section/${nextSubSection._id}`
+        )
+      }
+      return;
+    }
+    
+    // If we need to go to the next section
+    if (currentSectionIndx < courseSectionData.length - 1) {
+      const nextSection = courseSectionData[currentSectionIndx + 1];
+      if (nextSection?.subSection?.[0]?._id) {
+        const nextSectionId = nextSection._id;
+        const nextSubSectionId = nextSection.subSection[0]._id;
+        navigate(
+          `/view-course/${courseId}/section/${nextSectionId}/sub-section/${nextSubSectionId}`
+        )
+      }
     }
   }
 
   // check if the lecture is the last video of the course
   const isLastVideo = () => {
+    if (!courseSectionData?.length) return true;
+    
     const currentSectionIndx = courseSectionData.findIndex(
-      (data) => data._id === sectionId
+      (data) => data?._id === sectionId
     )
 
-    const noOfSubsections =
-      courseSectionData[currentSectionIndx].subSection.length
+    if (currentSectionIndx === -1 || !courseSectionData[currentSectionIndx]?.subSection) {
+      return true;
+    }
 
+    const noOfSubsections = courseSectionData[currentSectionIndx].subSection.length;
     const currentSubSectionIndx = courseSectionData[
       currentSectionIndx
-    ].subSection.findIndex((data) => data._id === subSectionId)
+    ].subSection.findIndex((data) => data?._id === subSectionId)
 
-    if (
+    return (
       currentSectionIndx === courseSectionData.length - 1 &&
       currentSubSectionIndx === noOfSubsections - 1
-    ) {
-      return true
-    } else {
-      return false
-    }
+    )
   }
 
   // go to the previous video

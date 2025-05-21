@@ -32,6 +32,25 @@ export default function EnrolledCourses() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const getFirstAvailableSection = (course) => {
+    if (!course || !Array.isArray(course?.courseContent) || course.courseContent.length === 0) {
+      return { sectionId: null, subSectionId: null };
+    }
+    
+    const firstSection = course.courseContent[0];
+    if (!firstSection || !Array.isArray(firstSection?.subSection) || firstSection.subSection.length === 0) {
+      return { 
+        sectionId: firstSection?._id || null, 
+        subSectionId: null 
+      };
+    }
+    
+    return {
+      sectionId: firstSection._id || null,
+      subSectionId: firstSection.subSection[0]?._id || null
+    };
+  };
+
   return (
     <>
       <div className="text-3xl text-richblack-50">Enrolled Courses</div>
@@ -42,7 +61,6 @@ export default function EnrolledCourses() {
       ) : !enrolledCourses.length ? (
         <p className="grid h-[10vh] w-full place-content-center text-richblack-5">
           You have not enrolled in any course yet.
-          {/* TODO: Modify this Empty State */}
         </p>
       ) : (
         <div className="my-8 text-richblack-5">
@@ -53,48 +71,62 @@ export default function EnrolledCourses() {
             <p className="flex-1 px-2 py-3">Progress</p>
           </div>
           {/* Course Names */}
-          {enrolledCourses.map((course, i, arr) => (
-            <div
-              className={`flex items-center border border-richblack-700 ${
-                i === arr.length - 1 ? "rounded-b-lg" : "rounded-none"
-              }`}
-              key={i}
-            >
+          {enrolledCourses.map((course, i, arr) => {
+            const { sectionId, subSectionId } = getFirstAvailableSection(course);
+            const canNavigate = course?._id && sectionId && subSectionId;
+            
+            return (
               <div
-                className="flex w-[45%] cursor-pointer items-center gap-4 px-5 py-3"
-                onClick={() => {
-                  navigate(
-                    `/view-course/${course?._id}/section/${course.courseContent?.[0]?._id}/sub-section/${course.courseContent?.[0]?.subSection?.[0]?._id}`
-                  )
-                }}
+                className={`flex items-center border border-richblack-700 ${
+                  i === arr.length - 1 ? "rounded-b-lg" : "rounded-none"
+                }`}
+                key={course._id || i}
               >
-                <img
-                  src={course.thumbnail}
-                  alt="course_img"
-                  className="h-14 w-14 rounded-lg object-cover"
-                />
-                <div className="flex max-w-xs flex-col gap-2">
-                  <p className="font-semibold">{course.courseName}</p>
-                  <p className="text-xs text-richblack-300">
-                    {course.courseDescription.length > 50
-                      ? `${course.courseDescription.slice(0, 50)}...`
-                      : course.courseDescription}
-                  </p>
+                <div
+                  className={`flex w-[45%] items-center gap-4 px-5 py-3 ${
+                    canNavigate ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                  }`}
+                  onClick={() => {
+                    if (canNavigate) {
+                      navigate(
+                        `/view-course/${course._id}/section/${sectionId}/sub-section/${subSectionId}`
+                      );
+                    }
+                  }}
+                >
+                  <img
+                    src={course.thumbnail || 'https://via.placeholder.com/60'}
+                    alt={course.courseName || 'Course thumbnail'}
+                    className="h-14 w-14 rounded-lg object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/60';
+                    }}
+                  />
+                  <div className="flex max-w-xs flex-col gap-2">
+                    <p className="font-semibold">{course.courseName || 'Untitled Course'}</p>
+                    <p className="text-xs text-richblack-300">
+                      {course.courseDescription
+                        ? (course.courseDescription.length > 50
+                            ? `${course.courseDescription.slice(0, 50)}...`
+                            : course.courseDescription)
+                        : 'No description available'}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-1/4 px-2 py-3">{course?.totalDuration || 'N/A'}</div>
+                <div className="flex w-1/5 flex-col gap-2 px-2 py-3">
+                  <p>Progress: {course.progressPercentage || 0}%</p>
+                  <ProgressBar
+                    completed={course.progressPercentage || 0}
+                    height="8px"
+                    isLabelVisible={false}
+                  />
                 </div>
               </div>
-              <div className="w-1/4 px-2 py-3">{course?.totalDuration}</div>
-              <div className="flex w-1/5 flex-col gap-2 px-2 py-3">
-                <p>Progress: {course.progressPercentage || 0}%</p>
-                <ProgressBar
-                  completed={course.progressPercentage || 0}
-                  height="8px"
-                  isLabelVisible={false}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>
-  )
+  );
 }

@@ -307,8 +307,6 @@ export const deleteCourse = async (data, token) => {
 // get full details of a course
 export const getFullDetailsOfCourse = async (courseId, token) => {
   const toastId = toast.loading("Loading...")
-  //   dispatch(setLoading(true));
-  let result = null
   try {
     const response = await apiConnector(
       "POST",
@@ -322,18 +320,22 @@ export const getFullDetailsOfCourse = async (courseId, token) => {
     )
     console.log("COURSE_FULL_DETAILS_API API RESPONSE............", response)
 
-    if (!response.data.success) {
-      throw new Error(response.data.message)
+    if (!response?.data?.success) {
+      throw new Error(response?.data?.message || "Failed to fetch course details")
     }
-    result = response?.data?.data
+    
+    // Return the entire response data object
+    return {
+      ...response.data.data,
+      completedVideos: response.data.data.completedVideos || []
+    }
   } catch (error) {
-    console.log("COURSE_FULL_DETAILS_API API ERROR............", error)
-    result = error.response.data
-    // toast.error(error.response.data.message);
+    console.error("COURSE_FULL_DETAILS_API API ERROR............", error)
+    toast.error(error.response?.data?.message || "Failed to load course details")
+    throw error // Re-throw the error to be handled by the component
+  } finally {
+    toast.dismiss(toastId)
   }
-  toast.dismiss(toastId)
-  //   dispatch(setLoading(false));
-  return result
 }
 
 // mark a lecture as complete
@@ -366,23 +368,36 @@ export const markLectureAsComplete = async (data, token) => {
 
 // create a rating for course
 export const createRating = async (data, token) => {
-  const toastId = toast.loading("Loading...")
+  const toastId = toast.loading("Submitting rating...")
   let success = false
   try {
+    console.log("Sending request to:", CREATE_RATING_API)
+    console.log("Request data:", data)
+    
     const response = await apiConnector("POST", CREATE_RATING_API, data, {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
     })
+    
     console.log("CREATE RATING API RESPONSE............", response)
-    if (!response?.data?.success) {
-      throw new Error("Could Not Create Rating")
+    
+    if (!response) {
+      throw new Error("No response received from server")
     }
-    toast.success("Rating Created")
-    success = true
+    
+    if (response.status === 200 || response.status === 201) {
+      toast.success("Rating submitted successfully!")
+      success = true
+    } else {
+      throw new Error(response.data?.message || "Failed to create rating")
+    }
   } catch (error) {
+    console.error("CREATE RATING API ERROR............", error)
+    const errorMessage = error.response?.data?.message || error.message || "Failed to submit rating"
+    toast.error(errorMessage)
     success = false
-    console.log("CREATE RATING API ERROR............", error)
-    toast.error(error.message)
+  } finally {
+    toast.dismiss(toastId)
   }
-  toast.dismiss(toastId)
   return success
 }

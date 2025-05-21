@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form"
 import { RxCross2 } from "react-icons/rx"
 import ReactStars from "react-rating-stars-component"
 import { useSelector } from "react-redux"
+import { toast } from "react-hot-toast"
 
 import { createRating } from "../../../services/operations/courseDetailsAPI"
 import IconBtn from "../../Common/IconBtn"
@@ -31,15 +32,30 @@ export default function CourseReviewModal({ setReviewModal }) {
   }
 
   const onSubmit = async (data) => {
-    await createRating(
-      {
+    try {
+      console.log("Submitting rating with data:", {
         courseId: courseEntireData._id,
         rating: data.courseRating,
         review: data.courseExperience,
-      },
-      token
-    )
-    setReviewModal(false)
+      });
+      
+      const success = await createRating(
+        {
+          courseId: courseEntireData._id,
+          rating: data.courseRating,
+          review: data.courseExperience,
+        },
+        token
+      );
+      
+      if (success) {
+        toast.success("Rating submitted successfully!");
+        setReviewModal(false);
+      }
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      toast.error("Failed to submit rating. Please try again.");
+    }
   }
 
   return (

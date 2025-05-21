@@ -23,14 +23,15 @@ exports.updateCourseProgress = async (req, res) => {
 
     if (!courseProgress) {
       // If course progress doesn't exist, create a new one
-      return res.status(404).json({
-        success: false,
-        message: "Course progress Does Not Exist",
+      courseProgress = new CourseProgress({
+        courseID: courseId,
+        userId: userId,
+        completedVideos: [subsectionId]
       })
     } else {
       // If course progress exists, check if the subsection is already completed
       if (courseProgress.completedVideos.includes(subsectionId)) {
-        return res.status(400).json({ error: "Subsection already completed" })
+        return res.status(200).json({ message: "Subsection already completed" })
       }
 
       // Push the subsection into the completedVideos array

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { Outlet, useParams } from "react-router-dom"
+import { toast } from "react-hot-toast"
 
 import CourseReviewModal from "../components/core/ViewCourse/CourseReviewModal"
 import VideoDetailsSidebar from "../components/core/ViewCourse/VideoDetailsSidebar"
@@ -20,16 +21,34 @@ export default function ViewCourse() {
 
   useEffect(() => {
     ;(async () => {
-      const courseData = await getFullDetailsOfCourse(courseId, token)
-      // console.log("Course Data here... ", courseData.courseDetails)
-      dispatch(setCourseSectionData(courseData.courseDetails.courseContent))
-      dispatch(setEntireCourseData(courseData.courseDetails))
-      dispatch(setCompletedLectures(courseData.completedVideos))
-      let lectures = 0
-      courseData?.courseDetails?.courseContent?.forEach((sec) => {
-        lectures += sec.subSection.length
-      })
-      dispatch(setTotalNoOfLectures(lectures))
+      try {
+        const courseData = await getFullDetailsOfCourse(courseId, token)
+        
+        if (!courseData?.courseDetails) {
+          console.error("No course details found")
+          return
+        }
+
+        const { courseDetails, completedVideos = [] } = courseData
+        
+        dispatch(setEntireCourseData(courseDetails))
+        dispatch(setCompletedLectures(completedVideos))
+        
+        if (courseDetails.courseContent) {
+          dispatch(setCourseSectionData(courseDetails.courseContent))
+          
+          let lectures = 0
+          courseDetails.courseContent?.forEach((sec) => {
+            if (sec?.subSection) {
+              lectures += sec.subSection.length
+            }
+          })
+          dispatch(setTotalNoOfLectures(lectures))
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error)
+        toast.error("Failed to load course details. Please try again.")
+      }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

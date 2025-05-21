@@ -41,12 +41,13 @@ function App() {
   const { user } = useSelector((state) => state.profile)
 
   useEffect(() => {
-    if (localStorage.getItem("token")) {
-      const token = JSON.parse(localStorage.getItem("token"))
-      dispatch(getUserDetails(token, navigate))
+    const token = localStorage.getItem("token"); // Get the token directly
+    if (token) {
+      dispatch(getUserDetails(token, navigate)); // Pass token as it is (no need to parse)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
+  
 
   return (
     <div className="flex min-h-screen w-screen flex-col bg-richblack-900 font-inter">
