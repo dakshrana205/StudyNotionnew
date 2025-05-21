@@ -27,11 +27,18 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
 	cors({
-	  origin: [
-		"http://localhost:3000",
-		"https://study-notionnew.vercel.app"
-	  ],
-	  credentials: true,  // Allow credentials (cookies, session) to be sent with requests
+	  origin: function (origin, callback) {
+	    if (!origin || origin === 'http://localhost:3000' || origin === 'https://study-notionnew.vercel.app') {
+	      callback(null, true);
+	    } else {
+	      callback(new Error('Not allowed by CORS'));
+	    }
+	  },
+	  credentials: true,
+	  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+	  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+	  maxAge: 3600
 	})
   );
   
